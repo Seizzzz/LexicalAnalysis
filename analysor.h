@@ -2,20 +2,30 @@
 
 #include <memory>
 #include <cctype>
+#include <cstdarg>
+#include <vector>
+#include <string>
+#include <algorithm>
+using std::find;
+using std::distance;
+using std::string;
+using std::vector;
 
-const int MAX_TOKEN_LEN = 10;
-const int MAX_BUFFER_LEN = 100;
+const int MAX_BUFFER_LEN = 500;
+const int MAX_TOKEN_LEN = 50;
 
 class Analysor
 {
 public:
 	int state = 0;
 	char C;
-	char token[MAX_TOKEN_LEN];
+	string token;
 	char buffer[MAX_BUFFER_LEN];
-	char* forward;
+	const char* forward;
 	char* lexemebegin;
 	int iskey = -1;
+
+	vector<string> table_keyword;
 
 	void analyse();
 
@@ -23,19 +33,16 @@ public:
 	void get_nbc();
 	void cat();
 	void retract();
-	void SToI();
-	void SToF();
+	int SToI();
+	double SToF();
 	void error();
-	void ret();
+	void ret(const char*, ...);
 
 	bool letter();
 	bool digit();
 
 	int reserve();
-
-	char* table_insert();
-
-
+	int table_insert();
 	
-	
+	Analysor(const char*, const char*); //³ÌÐò¡¢±£Áô×Ö
 };

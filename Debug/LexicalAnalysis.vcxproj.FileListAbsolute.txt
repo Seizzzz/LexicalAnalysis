@@ -1,0 +1,2 @@
+C:\Users\SLRYZD\Desktop\Github\LexicalAnalysis\LexicalAnalysis\Debug\LexicalAnalysis.exe
+C:\Users\SLRYZD\Desktop\Github\LexicalAnalysis\LexicalAnalysis\Debug\LexicalAnalysis.pdb
