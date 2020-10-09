@@ -21,8 +21,8 @@ public:
 	char C;
 	string token;
 	char buffer[MAX_BUFFER_LEN];
+	int buffer_size;
 	const char* forward;
-	char* lexemebegin;
 	int iskey = -1;
 
 	vector<string> table_keyword;
@@ -45,4 +45,7 @@ public:
 	int table_insert();
 	
 	Analysor(const char*, const char*); //³ÌÐò¡¢±£Áô×Ö
+
+private:
+	int line, col;
 };

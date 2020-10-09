@@ -24,26 +24,28 @@ void Analysor::analyse()
 						case '>': {
 							state = 9; break;
 						}
-						case ':': {
+						case '=': {
 							state = 10; break;
 						}
 						case '/': {
 							state = 11; break;
 						}
-						case '=': {
-							state = 0;
-							//ret(relop, EQ);
-							break;
-						}
+						case ',':
 						case '+':
 						case '-': 
 						case '*':
 						case '(':
 						case ')':
+						case '{':
+						case '}':
 						case ';':
 						case '\\': {
 							state = 0;
-							//ret(C, -);
+							ret("symbol:\t\t%c\n", C);
+							break;
+						}
+						case '"': {
+							state = 14;
 							break;
 						}
 						default: {
@@ -55,17 +57,17 @@ void Analysor::analyse()
 				break;
 			}
 			case 1: {
-				cat();	
+				cat();
 				get_char();
-				if (letter() || digit()) state = 1;
+				if (letter() || digit()) state = 1; // || C == '.'
 				else {
 					retract();
 					state = 0;
 					iskey = reserve();
-					if (iskey != -1) ret("iskey ID %d", iskey); //如果是关键字 返回记号
+					if (iskey != -1) ret("keyword:\t%s(ID:%d)\n", token.c_str(), iskey); //如果是关键字 返回记号
 					else {
 						int identry = table_insert();
-						ret("ID %d %s", reserve(), identry); //不是关键字 新增记号
+						ret("keyword:\t%s(new)\n", token.c_str()); //不是关键字 新增记号
 					}
 				}
 				break;
@@ -86,7 +88,7 @@ void Analysor::analyse()
 				else {
 					retract();
 					state = 0;
-					ret("NUM %d", SToI());
+					ret("number:\t\t%d\n", SToI());
 				}
 
 				break;
@@ -110,7 +112,7 @@ void Analysor::analyse()
 				else {
 					retract();
 					state = 0;
-					ret("NUM %lf", SToF());
+					ret("number:\t%lf\n", SToF());
 				}
 				break;
 			}
@@ -144,68 +146,73 @@ void Analysor::analyse()
 				else {
 					retract();
 					state = 0;
-					ret("NUM %lf", SToF());
+					ret("number:\t%lf\n", SToF());
 				}
 				break;
 			}
-			case 8: {
+			case 8: { // '<'
 				cat();
 				get_char();
 				if (C == '=') { //<=
 					cat();
 					state = 0;
-					ret("relop LE");
+					ret("symbol:\t\tLE\n");
 				}
 				else if (C == '>') { //<>
 					cat();
 					state = 0;
-					ret("relop RE");
+					ret("symbol:\t\t<>\n");
 				}
 				else { //<
 					retract();
 					state = 0;
-					ret("relop LT");
+					ret("symbol:\t\tLS\n");
 				}
 				break;
 			}
-			case 9: {
+			case 9: { // '>'
 				cat();
 				get_char();
 				if (C == '=') { //>=
 					cat();
 					state = 0;
-					ret("relop GE");
+					ret("symbol:\t\tGE\n");
 				}
 				else { //>
 					retract();
 					state = 0;
-					ret("relop GT");
+					ret("symbol:\t\tGT\n");
 				}
 				break;
 			}
-			case 10: {
+			case 10: { // '='
 				cat();
 				get_char();
-				if (C == '=') {
+				if (C == '=') { //==
 					cat();
 					state = 0;
-					ret("assign_op");
+					ret("symbol:\t\tEqual Opt\n");
 				}
-				else {
+				else { //=
 					retract();
 					state = 0;
-					ret(":");
+					ret("symbol:\t\tAssign Opt\n");
 				}
 				break;
 			}
-			case 11: {
+			case 11: { // '/'
 				cat();
 				get_char();
 				if (C == '*') state = 12;
+				else if (C == '/') {
+					while (C != '\n') get_char();
+					get_char();
+					state = 0;
+				}
 				else {
 					retract();
 					state = 0;
-					ret("/");
+					ret("symbol:\t\t/\n");
 				}
 				break;
 			}
@@ -222,13 +229,40 @@ void Analysor::analyse()
 				state = 0;
 				break;
 			}
+			case 14: { // '"'
+				cat();
+				get_char();
+				if(C == '\\') state = 15;
+				else if (C != '"') state = 14;
+				else {
+					cat();
+					state = 0;
+					ret("constchar:\t%s\n", token.c_str()); //不是关键字 新增记号
+				}
+				break;
+			}
+			case 15: { // '"'...'\'
+				get_char();
+				if (C != '"') {
+					token.append(1, '\\');
+					state = 14;
+				}
+				else {
+					state = 14;
+				}
+				break;
+			}
 		}
-	} while (C != EOF);
+	} while (forward - buffer < buffer_size); //C != EOF
 }
 
 void Analysor::get_char()
 {
 	C = *(forward++);
+	if (C == '\n') {
+		++line; col = 0;
+	}
+	++col;
 }
 
 void Analysor::get_nbc()
@@ -244,6 +278,8 @@ void Analysor::cat()
 void Analysor::retract()
 {
 	--forward;
+	if (*forward == '\n') --line;
+	--col;
 }
 
 int Analysor::SToI()
@@ -258,12 +294,13 @@ double Analysor::SToF()
 
 void Analysor::error()
 {
-	printf("error!");
+	printf("error<line:%d, column:%d>\n", line, col);
 	return;
 }
 
 void Analysor::ret(const char* format, ...)
 {
+	printf("(line:%d,column:%d)", line, col-strlen(token.c_str()));
 	va_list args;
 	va_start(args, format);
 	vprintf(format, args);
@@ -283,7 +320,8 @@ bool Analysor::digit()
 int Analysor::reserve()
 {
 	auto iter = find(table_keyword.begin(), table_keyword.end(), string(token));
-	return distance(table_keyword.begin(), iter);
+	if(iter != table_keyword.end()) return distance(table_keyword.begin(), iter);
+	return -1;
 }
 
 int Analysor::table_insert()
@@ -296,12 +334,13 @@ int Analysor::table_insert()
 
 Analysor::Analysor(const char* prgm, const char* key)
 {
-	FILE* pkey = NULL;
+	FILE* pkey;
 	if (fopen_s(&pkey, key, "r") != 0) {
 		ret("Keyword File Open Error");
 		return;
 	}
-	while(fscanf_s(pkey, "%s", buffer)) table_keyword.push_back(string(buffer));
+
+	while (fscanf_s(pkey, "%s", buffer, MAX_TOKEN_LEN) != EOF) table_keyword.push_back(string(buffer));
 	fclose(pkey);
 
 	FILE* pprgm = NULL;
@@ -310,11 +349,16 @@ Analysor::Analysor(const char* prgm, const char* key)
 		return;
 	}
 	fseek(pprgm, 0, SEEK_END);
-	int size = ftell(pprgm);
+	buffer_size = ftell(pprgm);
 	rewind(pprgm);
-	fread(buffer, 1, size, pprgm);
+	fread(buffer, 1, buffer_size, pprgm);
 	fclose(pprgm);
 
 	forward = buffer;
+
+	//init
+	line = 1;
+	col = 0;
+
 	analyse();
 }
