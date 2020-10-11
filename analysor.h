@@ -1,11 +1,14 @@
 #pragma once
 
+#include <iostream>
 #include <memory>
 #include <cctype>
 #include <cstdarg>
 #include <vector>
 #include <string>
 #include <algorithm>
+using std::cout;
+using std::endl;
 using std::find;
 using std::distance;
 using std::string;
@@ -17,6 +20,9 @@ const int MAX_TOKEN_LEN = 50;
 class Analysor
 {
 public:
+	Analysor(const char*, const char*); //程序、保留字
+
+private:
 	int state = 0;
 	char C;
 	string token;
@@ -43,9 +49,8 @@ public:
 
 	int reserve();
 	int table_insert();
-	
-	Analysor(const char*, const char*); //程序、保留字
 
-private:
-	int line, col;
+	void statistic();
+
+	int line, col, cnttoken = 0;
 };
